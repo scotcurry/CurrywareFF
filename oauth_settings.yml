@@ -2,8 +2,8 @@
 # AppID: x75r0W32
 app_id: dj0yJmk9WjFDVXBOUTRRM1ZDJmQ9WVdrOWVEYzFjakJYTXpJbWNHbzlNQS0tJnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PTlk
 app_secret: 2163ca33af0cc3c3ff1ca1477b1d53f502a90e89
-redirect: http://localhost:8000/tutorial/callback
+redirect: http://localhost:8000/stats/callback
 scopes: openid profile offline_access user.read calendars.read contacts.read directory.read.all
-authority: https://login.microsoftonline.com/common
-authorize_endpoint: /oauth2/v2.0/authorize
+authority: https://api.login.yahoo.com
+authorize_endpoint: /oauth2/request_auth
 token_endpoint: /oauth2/v2.0/token
