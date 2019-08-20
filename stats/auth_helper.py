@@ -22,31 +22,26 @@ token_url = '{0}{1}'.format(settings['authority'], settings['token_endpoint'])
 logger = logging.getLogger(__name__)
 logFormatter = '%(asctime)s - %(levelname)s - %(message)s'
 logging.basicConfig(format=logFormatter, level=logging.ERROR)
-logger = logging.getLogger(__name__)
 
 
 # Method to generate a sign-in url
+# There is something in here that I need to learn about state.
 def get_sign_in_url():
     # Initialize the OAuth client
-    logger.error('Signing in')
-    aad_auth = OAuth2Session(settings['app_id'], scope=settings['scopes'], redirect_uri=settings['redirect'])
+    aad_auth = OAuth2Session(settings['app_id'], redirect_uri=settings['redirect'])
     sign_in_url, state = aad_auth.authorization_url(authorize_url, prompt='login')
-    # Logging code
-    logger.error('Returning sign_in_url')
-    logger.error(sign_in_url, state)
     return sign_in_url, state
 
 
 # Method to exchange auth code for access token
 def get_token_from_code(callback_url, expected_state):
     # Initialize the OAuth client
-    aad_auth = OAuth2Session(settings['app_id'], state=expected_state,
-                             scope=settings['scopes'], redirect_uri=settings['redirect'])
+    logger.error('Token URL: %s', token_url)
+    aad_auth = OAuth2Session(settings['app_id'], state=expected_state, redirect_uri=settings['redirect'])
     token = aad_auth.fetch_token(token_url, client_secret=settings['app_secret'], authorization_response=callback_url)
     # Logging code
-    logger.error('Token URL: %s', token_url)
-    logger.error('Token: %s', token)
-    return token
+    # logger.error('Token: %s', token)
+    return token_url
 
 
 def store_token(request, token):

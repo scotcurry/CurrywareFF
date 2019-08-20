@@ -6,4 +6,4 @@ redirect: http://localhost:8000/stats/callback
 scopes: openid profile offline_access user.read calendars.read contacts.read directory.read.all
 authority: https://api.login.yahoo.com
 authorize_endpoint: /oauth2/request_auth
-token_endpoint: /oauth2/v2.0/token
+token_endpoint: /oauth2/get_token
