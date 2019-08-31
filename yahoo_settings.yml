@@ -1,0 +1,6 @@
+# Endpoint to get the game ID: https://fantasysports.yahooapis.com/fantasy/v2/game/nfl
+# Documentation link for the API:  https://developer.yahoo.com/fantasysports/guide/league-resource.html
+game_id: 390
+league_id: 877754
+# All calls for league information use the format (for the 2019 year): league/390.l.877754
+# Exact endpoint for this year. https://fantasysports.yahooapis.com/fantasy/v2/league/390.l.877754

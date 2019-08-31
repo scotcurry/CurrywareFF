@@ -3,6 +3,7 @@ from requests_oauthlib import OAuth2Session
 import os
 import time
 import logging
+import json
 
 # This is necessary for testing with non-HTTPS localhost
 # Remove this if deploying to production
@@ -16,20 +17,25 @@ os.environ['OAUTHLIB_IGNORE_SCOPE_CHANGE'] = '1'
 # Load the oauth_settings.yml file
 stream = open('oauth_settings.yml', 'r')
 settings = yaml.load(stream, Loader=yaml.FullLoader)
+
+# This is where the code builds out the URLs that get called from the oauth_settings.yaml file.
 authorize_url = '{0}{1}'.format(settings['authority'], settings['authorize_endpoint'])
 token_url = '{0}{1}'.format(settings['authority'], settings['token_endpoint'])
 
 logger = logging.getLogger(__name__)
 logFormatter = '%(asctime)s - %(levelname)s - %(message)s'
-logging.basicConfig(format=logFormatter, level=logging.ERROR)
+logging.basicConfig(format=logFormatter, level=logging.INFO)
 
 
 # Method to generate a sign-in url
-# There is something in here that I need to learn about state.
+# OAuth library documentation: https://docs.authlib.org/en/latest/client/api.html#authlib.client.OAuth2Session
+# This code is a bit of a mystery to me.  I can't figure out how exactly the sign_in_url is being created.
 def get_sign_in_url():
     # Initialize the OAuth client
     aad_auth = OAuth2Session(settings['app_id'], redirect_uri=settings['redirect'])
     sign_in_url, state = aad_auth.authorization_url(authorize_url, prompt='login')
+    logging.debug('Sign In URL: %s', sign_in_url)
+    logging.info('Auth Helper State: %s', state)
     return sign_in_url, state
 
 
@@ -37,15 +43,14 @@ def get_sign_in_url():
 def get_token_from_code(callback_url, expected_state):
     # Initialize the OAuth client
     logger.error('Token URL: %s', token_url)
+    logger.info('Get Token From Code State: %s', expected_state)
     aad_auth = OAuth2Session(settings['app_id'], state=expected_state, redirect_uri=settings['redirect'])
     token = aad_auth.fetch_token(token_url, client_secret=settings['app_secret'], authorization_response=callback_url)
-    # Logging code
-    # logger.error('Token: %s', token)
-    return token_url
+    access_token = token['access_token']
+    return access_token
 
 
 def store_token(request, token):
-    # logger.error('Storing OAuth token: %s', token)
     request.session['oauth_token'] = token
 
 
@@ -97,3 +102,6 @@ def remove_user_and_token(request):
 
     if 'user' in request.session:
         del request.session['user']
+
+    if 'auth_state' in request.session:
+        del request.session['auth_state']
