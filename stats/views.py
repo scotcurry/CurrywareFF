@@ -7,7 +7,7 @@ import logging
 
 
 from stats.auth_helper import get_sign_in_url, get_token_from_code, store_token, remove_user_and_token, get_token
-from stats.yahoo_ff_helper import get_league_info
+from stats.yahoo_ff_helper import get_league_info, get_team_info
 
 logFormatter = '%(asctime)s - %(levelname)s - %(message)s'
 logging.basicConfig(format=logFormatter, level=logging.INFO)
@@ -45,7 +45,7 @@ def sign_in(request):
     sign_in_url, state = get_sign_in_url()
     # Save the expected state so we can validate in the callback
     logging.info('Sign In State: %s', state)
-    # request.session['auth_state'] = state
+    request.session['auth_state_1'] = state
     # Redirect to the Yahoo sign-in page
     return HttpResponseRedirect(sign_in_url)
 
@@ -53,10 +53,9 @@ def sign_in(request):
 # The first call is made to the sign in.  In the callback we get a code that need to be exchanged for an token.
 def callback(request):
     # Get the state saved in session
-    expected_state = request.session.get('auth_state', '')
+    expected_state = request.session.get('auth_state_1', '')
+    logging.info('Callback Expected State: %s', expected_state)
     # Make the token request
-    logging.info('Complete request: %s', request)
-    logging.info('Expected State: %s', expected_state)
     token = get_token_from_code(request.get_full_path(), expected_state)
     logging.info('Token: %s', token)
 
@@ -68,6 +67,8 @@ def callback(request):
 
 def remove_token(request):
     remove_user_and_token(request)
+    validate_state = request.session.get('auth_state', '')
+    logging.info("Remove Token State: %s", validate_state)
     return HttpResponseRedirect(reverse('index'))
 
 
@@ -75,4 +76,6 @@ def show_league_info(request):
     context = initialize_context(request)
     token = get_token(request)
     league_info = get_league_info(token)
+    logging.info('League Name: %s', league_info)
+    team_info = get_team_info(token)
     return render(request, 'stats/league_info.html', context)

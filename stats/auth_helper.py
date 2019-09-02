@@ -34,20 +34,18 @@ def get_sign_in_url():
     # Initialize the OAuth client
     aad_auth = OAuth2Session(settings['app_id'], redirect_uri=settings['redirect'])
     sign_in_url, state = aad_auth.authorization_url(authorize_url, prompt='login')
-    logging.debug('Sign In URL: %s', sign_in_url)
-    logging.info('Auth Helper State: %s', state)
+
     return sign_in_url, state
 
 
 # Method to exchange auth code for access token
 def get_token_from_code(callback_url, expected_state):
     # Initialize the OAuth client
-    logger.error('Token URL: %s', token_url)
-    logger.info('Get Token From Code State: %s', expected_state)
     aad_auth = OAuth2Session(settings['app_id'], state=expected_state, redirect_uri=settings['redirect'])
     token = aad_auth.fetch_token(token_url, client_secret=settings['app_secret'], authorization_response=callback_url)
     access_token = token['access_token']
-    return access_token
+    logging.info('Complete Token: %s', token)
+    return token
 
 
 def store_token(request, token):
@@ -65,6 +63,7 @@ def store_user(request, user):
 # Code Note - Primary call to get the token to pass to O365
 def get_token(request):
     token = request.session['oauth_token']
+    logging.info('auth_helper Token Value: %s', token)
     if token is not None:
         # Check expiration
         now = time.time()
