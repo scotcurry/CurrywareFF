@@ -1,4 +1,11 @@
 {% extends "stats/layout.html" %}
+{% block content %}
 <div class="jumbotron">
   <h1>League Info</h1>
 </div>
+  {% if team_name %}
+<p>Team name: <i>{{team_name}}</i></p>
+  {% else %}
+    <p>No Context</p>
+  {% endif %}
+{% endblock %}

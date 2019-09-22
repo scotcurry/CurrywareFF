@@ -1,9 +1,9 @@
-import yaml
 from requests_oauthlib import OAuth2Session
+from stats.models import OAuthInfo
+import yaml
 import os
 import time
 import logging
-import json
 
 # This is necessary for testing with non-HTTPS localhost
 # Remove this if deploying to production
@@ -44,7 +44,8 @@ def get_token_from_code(callback_url, expected_state):
     aad_auth = OAuth2Session(settings['app_id'], state=expected_state, redirect_uri=settings['redirect'])
     token = aad_auth.fetch_token(token_url, client_secret=settings['app_secret'], authorization_response=callback_url)
     access_token = token['access_token']
-    logging.info('Complete Token: %s', token)
+    # Debug:  This is used for getting a token, that can be used for Postman
+    # logging.info('Complete Token: %s', token)
     return token
 
 
@@ -63,7 +64,7 @@ def store_user(request, user):
 # Code Note - Primary call to get the token to pass to O365
 def get_token(request):
     token = request.session['oauth_token']
-    logging.info('auth_helper Token Value: %s', token)
+    # logging.info('auth_helper Token Value: %s', token)
     if token is not None:
         # Check expiration
         now = time.time()
@@ -103,4 +104,13 @@ def remove_user_and_token(request):
         del request.session['user']
 
     if 'auth_state' in request.session:
-        del request.session['auth_state']
+        del request.session['auth_state_1']
+
+
+def store_user(request):
+    # logging.info('---- Store User Called ----')
+    request.session['user'] = {
+        'is_authenticated': True,
+        'name': 'Scot'
+    }
+
