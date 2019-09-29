@@ -8,7 +8,8 @@ import logging
 
 from stats.auth_helper import get_sign_in_url, get_token_from_code, store_token, remove_user_and_token, get_token, \
     store_user
-from stats.yahoo_ff_helper import get_league_info, get_team_info
+from stats.yahoo_ff_helper import get_league_info, get_team_info, get_available_players
+from stats.db_helper import check_user_exists, get_oauth_info
 
 logFormatter = '%(asctime)s - %(levelname)s - %(message)s'
 logging.basicConfig(format=logFormatter, level=logging.INFO)
@@ -19,7 +20,16 @@ logger = logging.getLogger(__name__)
 def index(request):
     # context - this is what gets sent into the view objects.  This is how you make a view dynamic.  Right now,
     # there is noting being sent in.
+    logger.debug('Calling stats/index')
+
     context = {}
+    if check_user_exists():
+        context['is_authenticated'] = True
+        context['user_name'] = 'Scot'
+        oauth_info = get_oauth_info()
+        request.session['oauth_token'] = oauth_info.access_token
+        request.session['refresh_token'] = oauth_info.refresh_token
+        request.session['expires_at'] = str(oauth_info.last_expire_time)
     return render(request, 'stats/index.html', context)
 
 
@@ -75,8 +85,6 @@ def callback(request):
 
 def remove_token(request):
     remove_user_and_token(request)
-    validate_state = request.session.get('auth_state_3', '')
-    logging.info("Remove Token State: %s", validate_state)
     return HttpResponseRedirect(reverse('index'))
 
 
@@ -84,7 +92,7 @@ def show_league_info(request):
     context = initialize_context(request)
     token = get_token(request)
     league_info = get_league_info(token)
-    # logging.info('League Name: %s', league_info)
     team_info = get_team_info(token)
     context['team_name'] = league_info
+    players = get_available_players(token, 'QB', '10')
     return render(request, 'stats/league_info.html', context)

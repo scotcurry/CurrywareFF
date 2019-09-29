@@ -4,12 +4,12 @@
   <h1>Yahoo Fantasy Football Code</h1>
 </div>
   <p class="lead">Fantasy Football Tracking App</p>
-  {% if user.is_authenticated %}
-    <h4>Welcome {{ user.name }}!</h4>
+  {% if is_authenticated %}
+    <h4>Welcome {{ user_name }}!</h4>
     <p>Use the navigation bar at the top of the page to get started.</p>
-  {% else %}
-    <a href="{% url 'signin' %}" class="btn btn-primary btn-large">Click here to sign in</a>
     <a href="{% url 'remove_token' %}" class="btn btn-primary btn-large">Clear access token</a>
     <a href="{% url 'show_league_info' %}" class="btn btn-primary btn-large">Show League Info</a>
+  {% else %}
+    <a href="{% url 'signin' %}" class="btn btn-primary btn-large">Click here to sign in</a>
   {% endif %}
 {% endblock %}

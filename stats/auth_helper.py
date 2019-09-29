@@ -1,5 +1,7 @@
 from requests_oauthlib import OAuth2Session
 from stats.models import OAuthInfo
+from datetime import datetime
+from stats.db_helper import check_user_exists
 import yaml
 import os
 import time
@@ -43,14 +45,24 @@ def get_token_from_code(callback_url, expected_state):
     # Initialize the OAuth client
     aad_auth = OAuth2Session(settings['app_id'], state=expected_state, redirect_uri=settings['redirect'])
     token = aad_auth.fetch_token(token_url, client_secret=settings['app_secret'], authorization_response=callback_url)
-    access_token = token['access_token']
-    # Debug:  This is used for getting a token, that can be used for Postman
-    # logging.info('Complete Token: %s', token)
+    logging.debug('- get_token_from_code - Complete Token: %s', token)
     return token
 
 
 def store_token(request, token):
-    request.session['oauth_token'] = token
+    request.session['oauth_token'] = token['access_token']
+    request.session['refresh_token'] = token['refresh_token']
+    request.session['expires_at'] = token['expires_at']
+    user_guid = token['xoauth_yahoo_guid']
+
+    # See if we already have a token and refresh token
+    # TODO: Need to make sure to update the expire time in the database.
+    if not check_user_exists():
+        dt_object = datetime.fromtimestamp(token['expires_at'])
+        oauth_storage = OAuthInfo(xoauth_yahoo_guid=user_guid, access_token=token['access_token'], last_expire_time=dt_object,
+                                  refresh_token=token['refresh_token'])
+        oauth_storage.save()
+    logging.info('Expires at token: %s', token['expires_at'])
 
 
 def store_user(request, user):
@@ -61,29 +73,40 @@ def store_user(request, user):
     }
 
 
-# Code Note - Primary call to get the token to pass to O365
+# Code Note - Primary call to get the token to pass to Yahoo
 def get_token(request):
     token = request.session['oauth_token']
-    # logging.info('auth_helper Token Value: %s', token)
+    token_expires = request.session['expires_at']
+    refresh_token = request.session['refresh_token']
+
+    time_from_string = datetime.strptime(token_expires, '%Y-%m-%d %I:%M:%S')
+    token_expires_timestamp = time_from_string.timestamp()
+
+    logging.debug('auth_helper Token Value: %s', token)
+    logging.debug('auth_helper Expires at: %s', token_expires_timestamp)
+    logging.debug('auth_helper Refresh Token: %s', refresh_token)
+
     if token is not None:
         # Check expiration
         now = time.time()
         # Subtract 5 minutes from expiration to account for clock skew
-        expire_time = token['expires_at'] - 300
+        expire_time = token_expires_timestamp - 300
         if now >= expire_time:
-            # Refresh the token
             aad_auth = OAuth2Session(settings['app_id'], token=token, scope=settings['scopes'],
                                      redirect_uri=settings['redirect'])
         else:
+            logging.info('Forced to get refresh token')
             aad_auth = OAuth2Session(settings['app_id'], token=token, scope=settings['scopes'],
                                      redirect_uri=settings['redirect'])
 
         refresh_params = {
             'client_id': settings['app_id'],
-            'client_secret': settings['app_secret']
+            'client_secret': settings['app_secret'],
+            'refresh_token': refresh_token
         }
 
         new_token = aad_auth.refresh_token(token_url, **refresh_params)
+        logging.info('New Toke: %s', new_token)
 
         # Save new token
         store_token(request, new_token)
@@ -113,4 +136,3 @@ def store_user(request):
         'is_authenticated': True,
         'name': 'Scot'
     }
-
