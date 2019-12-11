@@ -41,14 +41,15 @@ def get_team_info(token):
 
 
 def get_available_players(token, position, count):
+    logging.info('- available player token: %s', token)
     yahoo_client = OAuth2Session(token=token)
     additional_params = {'status': 'FA', 'position': position, 'count': count, 'sort': 'OR'}
     query_params.update(additional_params)
     available_players = yahoo_client.get('{0}/league/{1}/players'.format(yahoo_base_url, current_league),
                                          params=query_params)
     players_json = available_players.json()
-    # players_at_position = players_json['fantasy_content']['league'][0]['players']
-    logging.info('Player JSON: %s', players_json)
+    players_at_position = players_json['fantasy_content']['league'][1]
+    logging.info('Player JSON: %s', players_at_position)
 
 
 def get_current_user_info(token, xoauth_user_guid):

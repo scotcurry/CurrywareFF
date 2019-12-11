@@ -6,6 +6,7 @@ import yaml
 import os
 import time
 import logging
+import types
 
 # This is necessary for testing with non-HTTPS localhost
 # Remove this if deploying to production
@@ -19,6 +20,11 @@ os.environ['OAUTHLIB_IGNORE_SCOPE_CHANGE'] = '1'
 # Load the oauth_settings.yml file
 stream = open('oauth_settings.yml', 'r')
 settings = yaml.load(stream, Loader=yaml.FullLoader)
+stream.close()
+
+stream = open('yahoo_settings.yml', 'r')
+yahoo_settings = yaml.load(stream, Loader=yaml.FullLoader)
+stream.close()
 
 # This is where the code builds out the URLs that get called from the oauth_settings.yaml file.
 authorize_url = '{0}{1}'.format(settings['authority'], settings['authorize_endpoint'])
@@ -55,14 +61,23 @@ def store_token(request, token):
     request.session['expires_at'] = token['expires_at']
     user_guid = token['xoauth_yahoo_guid']
 
+    if type(token['expires_at']) == float:
+        expire_to_store = datetime.fromtimestamp(token['expires_at'])
+    else:
+        expire_to_store = token['expires_at']
+
+    logging.info('Expire to Store: %s', expire_to_store)
     # See if we already have a token and refresh token
     # TODO: Need to make sure to update the expire time in the database.
     if not check_user_exists():
-        dt_object = datetime.fromtimestamp(token['expires_at'])
-        oauth_storage = OAuthInfo(xoauth_yahoo_guid=user_guid, access_token=token['access_token'], last_expire_time=dt_object,
-                                  refresh_token=token['refresh_token'])
+        oauth_storage = OAuthInfo(xoauth_yahoo_guid=user_guid, access_token=token['access_token'],
+                                  last_expire_time=expire_to_store, refresh_token=token['refresh_token'])
         oauth_storage.save()
-    logging.info('Expires at token: %s', token['expires_at'])
+    else:
+        oauth_info = OAuthInfo.objects.get(xoauth_yahoo_guid=yahoo_settings['xoauth_yahoo_guid'])
+        oauth_info.last_expire_time = expire_to_store
+        oauth_info.access_token = token['access_token']
+        oauth_info.save()
 
 
 def store_user(request, user):
@@ -78,9 +93,13 @@ def get_token(request):
     token = request.session['oauth_token']
     token_expires = request.session['expires_at']
     refresh_token = request.session['refresh_token']
+    logging.info('- get_token - expires at: %s', request.session['expires_at'])
 
-    time_from_string = datetime.strptime(token_expires, '%Y-%m-%d %I:%M:%S')
-    token_expires_timestamp = time_from_string.timestamp()
+    if type(token_expires) == str:
+        time_from_string = datetime.strptime(token_expires, '%Y-%m-%d %H:%M:%S')
+        token_expires_timestamp = time_from_string.timestamp()
+    else:
+        token_expires_timestamp = token_expires['expires_at']
 
     logging.debug('auth_helper Token Value: %s', token)
     logging.debug('auth_helper Expires at: %s', token_expires_timestamp)
@@ -106,7 +125,7 @@ def get_token(request):
         }
 
         new_token = aad_auth.refresh_token(token_url, **refresh_params)
-        logging.info('New Toke: %s', new_token)
+        logging.info('New Token: %s', new_token)
 
         # Save new token
         store_token(request, new_token)
